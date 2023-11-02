@@ -1,0 +1,42 @@
+name: Deploy to Amazon EKS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+      
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v3
+      with: 
+        role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-build-role
+        aws-region: ${{ secrets.AWS_REGION }}
+          
+    #- name: Update eks config
+    #  run: aws eks --region ${{ secrets.AWS_REGION }} update-kubeconfig --name he-wordpress
+    
+    - name: Create EKS cluster
+      run: eksctl create cluster --name my-web-app --region us-east-1 --node-type t2.micro
+
+    - name: Set up kubectl
+      run: kubectl config use-context my-web-app
+
+    - name: Apply Kubernetes manifest
+      run: |
+        # apply service
+        kubectl apply -f ./k8/web-app-deployment.yaml
+        # apply deployment
+        kubectl apply -f ./k8/web-app-deployment.yaml
+
+    - name: Get service
+      run: |
+        kubectl get svc my-web-app-service
+
+
